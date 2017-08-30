@@ -1,0 +1,7 @@
+# (c) 2017 DataNexus Inc.  All Rights Reserved
+---
+- name: Start fusion service
+  become: true
+  service:
+    name: fusion
+    state: restarted

@@ -1,0 +1,14 @@
+# (c) 2017 DataNexus Inc.  All Rights Reserved
+---
+- block:
+  - name: "Create {{solr_group}} group"
+    group:
+      name: "{{solr_group}}"
+      system: yes
+  - name: "Create {{solr_user}} user"
+    user:
+      name: "{{solr_user}}"
+      group: "{{solr_group}}"
+      createhome: no
+      system: yes
+  become: true

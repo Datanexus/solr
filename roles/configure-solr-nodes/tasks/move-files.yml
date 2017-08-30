@@ -1,0 +1,11 @@
+# (c) 2017 DataNexus Inc.  All Rights Reserved
+---
+- block:
+  - name: "stat {{solr_data_dir}}/{{item | basename}}"
+    stat:
+      path: "{{solr_data_dir}}/{{item | basename}}"
+    register: item_stat
+  - name: "Move item if does not exist in {{solr_data_dir}}"
+    command: "mv {{item}} {{solr_data_dir}}/{{item | basename}}"
+    when: not (item_stat.stat.exists)
+  become: true

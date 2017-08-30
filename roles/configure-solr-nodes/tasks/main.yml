@@ -1,0 +1,3 @@
+# (c) 2017 DataNexus Inc.  All Rights Reserved
+---
+- include: setup-solr-server-properties.yml static=no

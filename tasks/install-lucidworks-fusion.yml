@@ -1,0 +1,50 @@
+# (c) 2017 DataNexus Inc.  All Rights Reserved
+---
+# First, setup a fact so that can test whether or not we're installing
+# Fusion from a local directory on the Ansible node
+- set_fact:
+    install_from_dir: "{{not(local_solr_file is undefined or local_solr_file is none or local_solr_file | trim == '')}}"
+# if we're not installing fusion from a local directory then we're installing
+# from a repository (either a local repository or the standard LucidWorks Fusion
+# repository)
+- block:
+  - name: Download solr distribution to /tmp
+    become: true
+    get_url:
+      url: "{{solr_url}}"
+      dest: /tmp
+      mode: 0644
+      validate_certs: no
+    environment: "{{environment_vars | default({})}}"
+  - set_fact:
+      local_filename: "{{solr_url | basename}}"
+  when: not(install_from_dir)
+# otherwise, if we're installing from a local directory on the Ansible node
+# that we're running this playbook from, copy over the files from that directory
+# to a temporary directory and and install the Confluent packages from those files
+- block:
+  - name: Copy fusion distribution from a local directory to /tmp
+    copy:
+      src: "{{local_solr_file}}"
+      dest: "/tmp"
+      mode: 0644
+  - set_fact:
+      local_filename: "{{local_solr_file | basename}}"
+  when: install_from_dir
+# finally, create a directory and unpack the distribution we downloaded into
+# that directory
+- block:
+  - name: Create "{{solr_dir}}"
+    file:
+      path: "{{solr_dir}}"
+      state: directory
+      owner: "{{solr_user}}"
+      group: "{{solr_group}}"
+  - name: Unpack solr distribution into "{{solr_dir}}"
+    unarchive:
+      copy: no
+      src: "/tmp/{{local_filename}}"
+      dest: "{{solr_dir}}"
+      owner: "{{solr_user}}"
+      group: "{{solr_group}}"
+  become: true

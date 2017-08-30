@@ -1,0 +1,99 @@
+# (c) 2017 DataNexus Inc.  All Rights Reserved
+#
+# Defaults that are necessary for all deployments of
+# LucidWorks Fusion (Solr)
+---
+application: solr
+
+# the Fusion version that should be installed and the URL that should be used
+# to download the Fusion (Solr) distribution (the Fusion package is distributed
+# as a gzipped tarfile)
+solr_version: 3.1.2
+solr_url: "https://download.lucidworks.com/fusion-{{solr_version}}/fusion-{{solr_version}}.tar.gz"
+
+# the directory where the solr data will be written
+solr_data_dir: "/data"
+
+# the directory that the distribution should be unpacked into
+solr_dir: "/opt/lucidworks"
+
+# the username and group that should be used when installing
+# and running Fusion (Solr)
+solr_user: "lucidworks"
+solr_group: "lucidworks"
+
+# the packages that need to be installed for Solr nodes (the JRE and JDK
+# packages from the OpenJDK project)
+solr_package_list: ["java-1.8.0-openjdk", "java-1.8.0-openjdk-devel"]
+
+# used to install Fusion (Solr) from a local (to the Ansible node) gzipped
+# tarfile (if it exists)
+local_solr_file: ""
+
+# path used to access private keys (defaults to the current working directory)
+private_key_path: "."
+
+# fusion.properties values
+default_gc_type: g1
+solr_java_ops: -Xms4g -Xmx4g -Xss256k
+ui_java_ops: -Xms1g -Xmx1g
+connectors_java_ops: -Xms3g -Xmx3g -Xss256k
+
+# systemd specific user limits
+open_files: 32768
+processes_number: 65536
+
+# this variable defines the default cluster that will be created when
+# deploying to an AWS or OpenStack environment; the value defined here will
+# result in the deployment of a three-node Kafka cluster
+node_map:
+  - { application: solr, count: 3 }
+
+# and define a set of application-specific security group rules; this list of
+# dictionary entries is used when setting up an application-specific security
+# on the network used by this application; the rules defined here allow for:
+#
+#  - client connections (external_subnet):
+#      - port 8764 (the Fusion UI service)
+#      - port 8984 (the Fusion Connector service)
+#  - internal communications (internal_subnet):
+#      - port 7764 (the Fusion UI service stop port)
+#      - port 7984 (the Fusion Connector service stop port)
+#      - port 8091 (the Fusion agent)
+#      - port 8765 (the Fusion REST API service)
+#      - port 7765 (the Fusion REST API service stop port)
+#      - port 8766 (the Spark master)
+#      - port 8767 (the Spark master UI)
+#      - port 8768 (the Fusion SQL engine)
+#      - port 8769 (the Spark worker)
+#      - port 8770 (the Spark worker UI)
+#      - port 8983 (the Solr instance)
+#      - port 7983 (the Fusion Solr service stop port)
+#      - port 2181 (the external Zookeeper ensemble, if used)
+#      - port 9383 (the bundled Zookeeper instance, if used)
+#  - internal communications via port 9983 (the bundled Zookeeper instance,
+#    used for single-node deployments)
+#
+# this set of rules should, more than likely, not be overridden; if it is
+# overridden, then care should be taken to at least maintain this default list
+# of application-specific security group rules or the nodes in the cluster may
+# not be able to communicate with each other
+application_sg_rules:
+  # external subnet rules start here
+  - { proto: tcp, from_port: 8764, to_port: 8764, cidr_ip: "{{external_subnet}}" }
+  - { proto: tcp, from_port: 8984, to_port: 8984, cidr_ip: "{{external_subnet}}" }
+  # internal subnet rules start here
+  - { proto: tcp, from_port: 7764, to_port: 7764, cidr_ip: "{{internal_subnet}}" }
+  - { proto: tcp, from_port: 7984, to_port: 7984, cidr_ip: "{{internal_subnet}}" }
+  - { proto: tcp, from_port: 8091, to_port: 8091, cidr_ip: "{{internal_subnet}}" }
+  - { proto: tcp, from_port: 8765, to_port: 8765, cidr_ip: "{{internal_subnet}}" }
+  - { proto: tcp, from_port: 7765, to_port: 7765, cidr_ip: "{{internal_subnet}}" }
+  - { proto: tcp, from_port: 8766, to_port: 8766, cidr_ip: "{{internal_subnet}}" }
+  - { proto: tcp, from_port: 8767, to_port: 8767, cidr_ip: "{{internal_subnet}}" }
+  - { proto: tcp, from_port: 8768, to_port: 8768, cidr_ip: "{{internal_subnet}}" }
+  - { proto: tcp, from_port: 8769, to_port: 8769, cidr_ip: "{{internal_subnet}}" }
+  - { proto: tcp, from_port: 8770, to_port: 8770, cidr_ip: "{{internal_subnet}}" }
+  - { proto: tcp, from_port: 8983, to_port: 8983, cidr_ip: "{{internal_subnet}}" }
+  - { proto: tcp, from_port: 7983, to_port: 7983, cidr_ip: "{{internal_subnet}}" }
+  - { proto: tcp, from_port: 2181, to_port: 2181, cidr_ip: "{{internal_subnet}}" }
+  - { proto: tcp, from_port: 9983, to_port: 9983, cidr_ip: "{{internal_subnet}}" }

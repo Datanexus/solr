@@ -1,0 +1,161 @@
+# (c) 2017 DataNexus Inc.  All Rights Reserved
+---
+# configure our Solr instance to point to the Zookeeper cluster
+# (if one is defined, of course)
+- block:
+  - name: Find install directory name
+    find:
+      file_type: directory
+      path: "{{solr_dir}}"
+      recurse: yes
+      patterns: apps
+    register: find_results
+    become: true
+  - set_fact: full_solr_dir="{{find_results.files.0.path | dirname}}"
+# if we're setting up a Fusion cluster, then change the configuration
+# file accordingly (setting the Zookeeper-related parameters to point
+# to the IP addresses of the Zookeeper cluster that was passed in and
+# setting up the fusion.properties file so that Zookeeper will not
+# be started up locally)
+- block:
+  - name: Setup references to zookeeper cluster in conf/fusion.properties
+    lineinfile:
+      dest: "{{full_solr_dir}}/conf/fusion.properties"
+      regexp: "^FUSION_ZK="
+      line: "FUSION_ZK={{(zk_nodes | default([])) | join(':2181,')}}:2181"
+  - name: Define ZK Connect address for Solr
+    lineinfile:
+      dest: "{{full_solr_dir}}/conf/fusion.properties"
+      regexp: "^(# )?default.zk.connect ="
+      line: "default.zk.connect = {{(zk_nodes | default([])) | join(':2181,')}}:2181"
+  - name: Disable startup of local Zookeeper instance
+    replace:
+      dest: "{{full_solr_dir}}/conf/fusion.properties"
+      regexp: '^(.*)zookeeper, (.*)$'
+      replace: '\g<1>\g<2>'
+  become: true
+  when: (zk_nodes | default([])) != []
+# change the address where that the Fusion server listens on
+# for client connections as well as the address where the Fusion
+# server's UI is listening
+# sets java opts for solr connectors and ui
+# sets solr home to avoid the need for creating a symlink
+- block:
+  - name: Set default address and bind address to address of NIC that Fusion should listen on
+    lineinfile:
+      dest: "{{full_solr_dir}}/conf/fusion.properties"
+      regexp: "^(#)?default.{{item}} ="
+      line: "default.{{item}} = {{data_addr}}"
+      insertafter: "# By default"
+    with_items:
+      - address
+      - bindAddress
+  - name: Set default GC
+    lineinfile:
+      dest: "{{full_solr_dir}}/conf/fusion.properties"
+      regexp: "^(#)?default.gc ="
+      line: "default.gc = {{default_gc_type}}"
+      backrefs: yes
+  - name: Set Solr address and bind address to address of NIC that Solr should listen on
+    lineinfile:
+      dest: "{{full_solr_dir}}/conf/fusion.properties"
+      regexp: "^(#)?solr.{{item}} ="
+      line: "solr.{{item}} = {{data_addr}}"
+      insertafter: "^# Solr"
+    with_items:
+      - address
+      - bindAddress
+
+  - name: Setup SOLR_JETTY_HOST to match in conf/fusion.properties
+    lineinfile:
+      dest: "{{full_solr_dir}}/conf/fusion.properties"
+      regexp: "^SOLR_JETTY_HOST="
+      line: "SOLR_JETTY_HOST={{data_addr}}"
+  - name: Set solr java options
+    lineinfile:
+      dest: "{{full_solr_dir}}/conf/fusion.properties"
+      regexp: "^(#)?solr.jvmOptions ="
+      line: "solr.jvmOptions = {{solr_java_ops}}"
+      insertafter: "^# Solr"
+  - name: Set solr home dir
+    lineinfile:
+      dest: "{{full_solr_dir}}/conf/fusion.properties"
+      line: "solr.solr.home = {{solr_data_dir}}"
+      insertafter: "^# Solr"
+  - name: Set fusion ui java options
+    lineinfile:
+      dest: "{{full_solr_dir}}/conf/fusion.properties"
+      regexp: "^(#)?ui.jvmOptions ="
+      line: "ui.jvmOptions = {{ui_java_ops}}"
+      insertafter: "^# UI"
+  - name: Set fusion connectors java options
+    lineinfile:
+      dest: "{{full_solr_dir}}/conf/fusion.properties"
+      regexp: "^(#)?connectors.jvmOptions="
+      line: "connectors.jvmOptions = {{connectors_java_ops}}"
+      backrefs: yes
+  - name: Set Zookeeper address and bind address when creating a local Zookeeper instance
+    lineinfile:
+      dest: "{{full_solr_dir}}/conf/fusion.properties"
+      regexp: "^(#)?zookeeper.{{item}} ="
+      line: "zookeeper.{{item}} = {{data_addr}}"
+      insertafter: "^# Zookeeper"
+    with_items:
+      - address
+      - bindAddress
+    when: (zk_nodes | default([])) == []
+  become: true
+# if a `solr_data_dir` value was passed in, then ensure that directory
+# exists, move the contents of the default directory over to that
+# `solr_data_dir` directory, remove the default data directory, and replace
+# it with a soft link to the new `solr_data_dir` directory
+- block:
+  - name: "Ensure {{solr_data_dir}} directory exists"
+    file:
+      path: "{{solr_data_dir}}"
+      state: directory
+      owner: "{{solr_user}}"
+      group: "{{solr_group}}"
+  - name: "Get a list of the contents to copy over to the {solr_data_dir}} directory"
+    find:
+      paths: "{{full_solr_dir}}/data/solr"
+      file_type: file
+    register: file_list
+  - find:
+      paths: "{{full_solr_dir}}/data/solr"
+      file_type: directory
+    register: dir_list
+  become: true
+  when: not (solr_data_dir is undefined or solr_data_dir is none or solr_data_dir | trim == '')
+# loop through the items in our list and, if they don't exist in the new
+# data directory, move them over there
+- include: move-files.yml
+  with_items: "{{(dir_list.files + file_list.files) | map(attribute='path') | list}}"
+  when: not (solr_data_dir is undefined or solr_data_dir is none or solr_data_dir | trim == '')
+## and finally, now that the contents are moved, remove the default
+- block:
+  - name: "Ensure {{full_solr_dir}}/data/solr directory is removed"
+    file:
+      path: "{{full_solr_dir}}/data/solr"
+      state: absent
+      owner: "{{solr_user}}"
+      group: "{{solr_group}}"
+  become: true
+  when: not (solr_data_dir is undefined or solr_data_dir is none or solr_data_dir | trim == '')
+# If this is a single-node deployment, then we'll also be starting up the
+# built-in Zookeeper instance that comes with Fusion; in that case, configure
+# that Zookeeper instance to use the data directory that was passed in
+- block:
+  - name: "Ensure {{solr_data_dir}}/zookeeper directory exists"
+    file:
+      path: "{{solr_data_dir}}/zookeeper"
+      state: directory
+      owner: "{{solr_user}}"
+      group: "{{solr_group}}"
+  - name: And ensure that Zookeeper is configured to use that data directory
+    lineinfile:
+      dest: "{{full_solr_dir}}/conf/zookeeper/zoo.cfg"
+      regexp: "^dataDir="
+      line: "dataDir={{solr_data_dir}}/zookeeper"
+  become: true
+  when: (zk_nodes | default([])) == []

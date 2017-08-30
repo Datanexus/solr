@@ -1,0 +1,10 @@
+# (c) 2017 DataNexus Inc.  All Rights Reserved
+---
+- include: install-required-packages.yml static=no
+- include: add-solr-user.yml static=no
+- include: install-lucidworks-fusion.yml static=no
+- include_role:
+    name: configure-solr-nodes
+- include: create-solr-services.yml static=no
+- include: enable-solr-services.yml static=no
+- include: start-solr-services.yml static=no
