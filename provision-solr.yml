@@ -38,6 +38,14 @@
       - set_fact:
           num_solr_nodes: "{{groups['solr'] | default([]) | length}}"
           num_zk_nodes: "{{groups['zookeeper'] | default([]) | length}}"
+      # if an existing set of Solr/Fusion nodes were found, throw an error
+      # unless the reuse_existing_nodes flag was set to 'true' or 'yes')
+      - block:
+        - name: Fail playbook run if existing nodes found and user did not request reuse
+          fail:
+            msg: "Found an existing set of nodes - {{(groups['solr'] | to_yaml).split('\n').0}}; aborting playbook run"
+          when: not((reuse_existing_nodes | default(false)) | bool)
+        when: num_solr_nodes | int > 0
       # if an external Zookeeper ensemble (or node) was not found and we're
       # deploying an Solr/Fusion cluster (or multiple matching Solr/Fusion
       # nodes were found), then it's an error
