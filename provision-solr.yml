@@ -63,7 +63,7 @@
         when: num_solr_nodes | int == 0 and cloud == 'aws'
       - include_role:
           name: 'osp'
-        when: num_solr_nodes == 0 and cloud == 'osp'
+        when: num_solr_nodes | int == 0 and cloud == 'osp'
       when: cloud is defined and (cloud == 'aws' or cloud == 'osp')
 
 # If we're dynamically provisioning, then do some final configuration on the
