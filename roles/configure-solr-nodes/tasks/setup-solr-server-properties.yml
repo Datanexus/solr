@@ -129,7 +129,7 @@
   when: not (solr_data_dir is undefined or solr_data_dir is none or solr_data_dir | trim == '')
 # loop through the items in our list and, if they don't exist in the new
 # data directory, move them over there
-- include: move-files.yml
+- include_tasks: move-files.yml
   with_items: "{{(dir_list.files + file_list.files) | map(attribute='path') | list}}"
   when: not (solr_data_dir is undefined or solr_data_dir is none or solr_data_dir | trim == '')
 ## and finally, now that the contents are moved, remove the default
