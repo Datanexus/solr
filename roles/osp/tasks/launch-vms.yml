@@ -260,7 +260,7 @@
 
 # wait_for doesn't work with a proxy, so we need to ssh and check output
 - name: Wait for instances to be accessible via SSH
-  shell: /bin/sleep 20 && /usr/bin/ssh -i "{{ private_keyfile_path }}" "{{ user }}@{{ hostvars[item.server.addresses.private.0['addr']].ansible_host }}" echo DataNexus  
+  shell: /bin/sleep 20 && /usr/bin/ssh -i "{{ private_keyfile_path }}" "{{ user }}@{{ hostvars[item.server.addresses.private.0['addr']].ansible_host }}" echo DataNexus
   register: output
   retries: 4
   delay: 10
