@@ -8,7 +8,7 @@ application: solr
 # the Fusion version that should be installed and the URL that should be used
 # to download the Fusion (Solr) distribution (the Fusion package is distributed
 # as a gzipped tarfile)
-solr_version: 3.1.2
+solr_version: 3.1.1
 solr_url: "https://download.lucidworks.com/fusion-{{solr_version}}/fusion-{{solr_version}}.tar.gz"
 
 # the directory where the solr data will be written
