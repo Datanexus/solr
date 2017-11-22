@@ -31,7 +31,7 @@ solr_package_list: ["java-1.8.0-openjdk", "java-1.8.0-openjdk-devel"]
 local_solr_file: ""
 
 # path used to access private keys (defaults to the current working directory)
-private_key_path: "."
+private_key_path: "{{playbook_dir}}"
 
 # fusion.properties values
 default_gc_type: g1
